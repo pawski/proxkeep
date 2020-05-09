@@ -1,0 +1,6 @@
+package: github.com/pawski/proxkeep
+import:
+- package: github.com/Sirupsen/logrus
+  version: ~1.6.0
+- package: github.com/urfave/cli
+  version: ~2.2.0

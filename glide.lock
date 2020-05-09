@@ -1,0 +1,19 @@
+hash: 09946b0cf81d40897764c0ca07802a69413754d41462e50357eeea7f03f41319
+updated: 2020-05-08T21:41:11.839988+02:00
+imports:
+- name: github.com/konsorten/go-windows-terminal-sequences
+  version: edb144dfd453055e1e49a3d8b410a660b5a87613
+- name: github.com/pawski/go-xchange
+  version: c21f52a3fba3d5186ff602ecb4606134c61aca03
+  subpackages:
+  - logger
+- name: github.com/Sirupsen/logrus
+  version: 60c74ad9be0d874af0ab0daef6ab07c5c5911f0d
+- name: github.com/urfave/cli
+  version: d648edd48d89ef3a841b1ec75c2ebbd4de5f748f
+- name: golang.org/x/sys
+  version: bc7a7d42d5c30f4d0fe808715c002826ce2c624e
+  subpackages:
+  - internal/unsafeheader
+  - unix
+testImports: []

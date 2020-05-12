@@ -1,11 +1,11 @@
 package main
 
 import (
-	"crypto/md5"
+	"errors"
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/pawski/proxkeep/logger"
-	"github.com/pawski/proxkeep/validator"
+	"github.com/pawski/proxkeep/proxy"
 	"github.com/urfave/cli"
 	"log"
 	"os"
@@ -28,21 +28,41 @@ func main() {
 	app.Commands = []*cli.Command{
 		&cli.Command{
 			Name:  "run",
-			Usage: "Go Gadget Go",
+			Usage: "run [ip] [port]",
 			Action: func(c *cli.Context) error {
-				code, expectedResponse, err := validator.DirectFetch("https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf")
 
-				if 200 == code {
-					validator.HealthCheck("95.79.36.55", "44861", expectedResponse)
+				ip := c.Args().Get(0)
+				port := c.Args().Get(1)
+				logger.Get().Infof("Using %v:%v", ip, port)
+
+				testUrl := "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf"
+				code, response, err := proxy.DirectFetch(testUrl)
+
+				if code != 200 {
+					return errors.New("test URL returned non 200 response code")
 				}
 
-				return err
+				if err != nil {
+					return err
+				}
+
+				logger.Get().Info("Test data acquired")
+
+				pCode, pResponse, _ := proxy.Fetch(ip, port, testUrl)
+
+				if code == pCode && response == pResponse {
+					logger.Get().Info("Proxy - OK")
+				} else {
+					logger.Get().Info("Proxy - NOK")
+				}
+
+				return nil
 			},
 		}, &cli.Command{
 			Name:  "selftest",
 			Usage: "Takes attempt to fetch test page content",
 			Action: func(c *cli.Context) error {
-				code, response, err := validator.DirectFetch("http://ifconfig.io/all.json")
+				code, response, err := proxy.DirectFetch("http://ifconfig.io/all.json")
 
 				fmt.Println(code)
 				fmt.Println(response)

@@ -1,14 +1,14 @@
-package validator
+package proxy
 
 import (
 	"crypto/tls"
-	"github.com/pawski/go-xchange/logger"
+	"github.com/pawski/proxkeep/logger"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 )
 
-func HealthCheck(host, port, expectedResponse string) {
+func Fetch(host, port, testURL string) (int, string, error) {
 
 	logger.Get().Info("Proxy health check")
 	transport := http.Transport{}
@@ -18,10 +18,11 @@ func HealthCheck(host, port, expectedResponse string) {
 	client := &http.Client{}
 	client.Transport = &transport
 
-	response, err := client.Get("https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf")
+	response, err := client.Get(testURL)
 
 	if err != nil {
 		logger.Get().Error(err)
+		return 0, "", err
 	}
 
 	defer response.Body.Close()
@@ -29,14 +30,12 @@ func HealthCheck(host, port, expectedResponse string) {
 
 	if err != nil {
 		logger.Get().Error(err)
+		return 0, "", err
 	}
 
-	logger.Get().Info(response.StatusCode)
-	logger.Get().Info(len(body))
-	logger.Get().Info(len(expectedResponse))
+	return response.StatusCode, string(body), nil
 }
 
-// ifconfig.io/all.json
 func DirectFetch(url string) (int, string, error) {
 	client := &http.Client{}
 

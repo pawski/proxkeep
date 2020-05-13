@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/Sirupsen/logrus"
@@ -31,14 +32,34 @@ func main() {
 			Usage: "run [ip] [port]",
 			Action: func(c *cli.Context) error {
 
+				logger.Get().Infof("Running...")
+
+				return nil
+			},
+		}, &cli.Command{
+			Name:  "test",
+			Usage: "test [ip] [port]",
+			Action: func(c *cli.Context) error {
+
 				ip := c.Args().Get(0)
 				port := c.Args().Get(1)
+
+				if "" == port {
+					port = "8080"
+				}
+
+				if "" == ip {
+					logger.Get().Error("IP Address cannot be empty")
+
+					return nil
+				}
+
 				logger.Get().Infof("Using %v:%v", ip, port)
 
 				testUrl := "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf"
-				code, response, err := proxy.DirectFetch(testUrl)
+				response, err := proxy.DirectFetch(testUrl)
 
-				if code != 200 {
+				if response.StatusCode != 200 {
 					return errors.New("test URL returned non 200 response code")
 				}
 
@@ -47,11 +68,13 @@ func main() {
 				}
 
 				logger.Get().Info("Test data acquired")
+				logger.Get().Infof("Main connection Throughput %.4f KB/s", float64(len(response.Body)/1024)/response.TransferTime)
 
-				pCode, pResponse, _ := proxy.Fetch(ip, port, testUrl)
+				pResponse, _ := proxy.Fetch(ip, port, testUrl)
 
-				if code == pCode && response == pResponse {
+				if response.StatusCode == pResponse.StatusCode && 0 == bytes.Compare(response.Body, pResponse.Body) {
 					logger.Get().Info("Proxy - OK")
+					logger.Get().Infof("Proxy throughput %.4f KB/s", float64(len(pResponse.Body)/1024)/pResponse.TransferTime)
 				} else {
 					logger.Get().Info("Proxy - NOK")
 				}
@@ -62,10 +85,10 @@ func main() {
 			Name:  "selftest",
 			Usage: "Takes attempt to fetch test page content",
 			Action: func(c *cli.Context) error {
-				code, response, err := proxy.DirectFetch("http://ifconfig.io/all.json")
+				response, err := proxy.DirectFetch("http://ifconfig.io/all.json")
 
-				fmt.Println(code)
-				fmt.Println(response)
+				fmt.Println(response.StatusCode)
+				fmt.Println(string(response.Body))
 
 				return err
 			},

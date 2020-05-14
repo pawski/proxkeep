@@ -1,18 +1,18 @@
-hash: 09946b0cf81d40897764c0ca07802a69413754d41462e50357eeea7f03f41319
-updated: 2020-05-08T21:41:11.839988+02:00
+hash: 9ead5bf6d97231db3886c2c35c3b565aad7321dff48575e8918c907fe90ba148
+updated: 2020-05-14T16:05:12.739222+02:00
 imports:
+- name: github.com/go-sql-driver/mysql
+  version: 17ef3dd9d98b69acec3e85878995ada9533a9370
+- name: github.com/golang/sys
+  version: 417ce2331b5c91eea36730d3e1739adb75193be2
 - name: github.com/konsorten/go-windows-terminal-sequences
   version: edb144dfd453055e1e49a3d8b410a660b5a87613
-- name: github.com/pawski/go-xchange
-  version: c21f52a3fba3d5186ff602ecb4606134c61aca03
-  subpackages:
-  - logger
 - name: github.com/Sirupsen/logrus
   version: 60c74ad9be0d874af0ab0daef6ab07c5c5911f0d
 - name: github.com/urfave/cli
-  version: d648edd48d89ef3a841b1ec75c2ebbd4de5f748f
+  version: e6cf83ec39f6e1158ced1927d4ed14578fda8edb
 - name: golang.org/x/sys
-  version: bc7a7d42d5c30f4d0fe808715c002826ce2c624e
+  version: 417ce2331b5c91eea36730d3e1739adb75193be2
   subpackages:
   - internal/unsafeheader
   - unix

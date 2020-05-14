@@ -26,8 +26,8 @@ func main() {
 		return nil
 	}
 
-	app.Commands = []*cli.Command{
-		&cli.Command{
+	app.Commands = []cli.Command{
+		cli.Command{
 			Name:  "run",
 			Usage: "run [ip] [port]",
 			Action: func(c *cli.Context) error {
@@ -36,7 +36,7 @@ func main() {
 
 				return nil
 			},
-		}, &cli.Command{
+		}, cli.Command{
 			Name:  "test",
 			Usage: "test [ip] [port]",
 			Action: func(c *cli.Context) error {
@@ -81,7 +81,7 @@ func main() {
 
 				return nil
 			},
-		}, &cli.Command{
+		}, cli.Command{
 			Name:  "selftest",
 			Usage: "Takes attempt to fetch test page content",
 			Action: func(c *cli.Context) error {

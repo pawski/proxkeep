@@ -2,9 +2,13 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/Sirupsen/logrus"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/pawski/proxkeep/application/command"
+	"github.com/pawski/proxkeep/infrastructure/repository"
 	"github.com/pawski/proxkeep/logger"
 	"github.com/pawski/proxkeep/proxy"
 	"github.com/urfave/cli"
@@ -32,9 +36,15 @@ func main() {
 			Usage: "run [ip] [port]",
 			Action: func(c *cli.Context) error {
 
-				logger.Get().Infof("Running...")
+				db, err := sql.Open("mysql", "root:vagrant@tcp(192.168.55.102)/hrs")
 
-				return nil
+				if err != nil {
+					logger.Get().Errorln(err)
+					return err
+				}
+
+				return command.NewRunCommand(repository.NewProxyServerRepository(db, logger.Get()), logger.Get()).Execute()
+
 			},
 		}, cli.Command{
 			Name:  "test",
@@ -95,9 +105,9 @@ func main() {
 		},
 	}
 
-	err := app.Run(os.Args)
+	appErr := app.Run(os.Args)
 
-	if err != nil {
-		log.Fatal(err)
+	if appErr != nil {
+		log.Fatal(appErr)
 	}
 }

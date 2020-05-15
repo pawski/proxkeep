@@ -1,8 +1,8 @@
-package proxy
+package http
 
 import (
 	"crypto/tls"
-	"github.com/pawski/proxkeep/logger"
+	"github.com/pawski/proxkeep/infrastructure/logger/logrus"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -15,9 +15,12 @@ type Response struct {
 	TransferTime float64
 }
 
+func (r Response) BytesThroughputRate() float64 {
+	return float64(len(r.Body)) / r.TransferTime
+}
+
 func Fetch(host, port, testURL string) (Response, error) {
 
-	logger.Get().Info("Proxy health check")
 	transport := http.Transport{}
 	transport.Proxy = http.ProxyURL(&url.URL{Scheme: "http", Host: host + ":" + port})
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
@@ -30,7 +33,7 @@ func Fetch(host, port, testURL string) (Response, error) {
 	duration := time.Since(start).Seconds()
 
 	if err != nil {
-		logger.Get().Error(err)
+		logrus.Get().Debug(err)
 		return Response{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
@@ -38,7 +41,7 @@ func Fetch(host, port, testURL string) (Response, error) {
 	body, err := ioutil.ReadAll(response.Body)
 
 	if err != nil {
-		logger.Get().Error(err)
+		logrus.Get().Debug(err)
 		return Response{StatusCode: response.StatusCode, Body: []byte{}, TransferTime: duration}, err
 	}
 
@@ -51,7 +54,7 @@ func DirectFetch(url string) (Response, error) {
 	request, err := http.NewRequest("GET", url, nil)
 
 	if err != nil {
-		logger.Get().Error(err)
+		logrus.Get().Debug(err)
 		return Response{StatusCode: 0, Body: []byte{}, TransferTime: 0}, err
 	}
 
@@ -60,7 +63,7 @@ func DirectFetch(url string) (Response, error) {
 	duration := time.Since(start).Seconds()
 
 	if err != nil {
-		logger.Get().Error(err)
+		logrus.Get().Debug(err)
 		return Response{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
@@ -68,7 +71,7 @@ func DirectFetch(url string) (Response, error) {
 	body, err := ioutil.ReadAll(response.Body)
 
 	if err != nil {
-		logger.Get().Error(err)
+		logrus.Get().Debug(err)
 		return Response{StatusCode: response.StatusCode, Body: []byte{}, TransferTime: duration}, err
 	}
 

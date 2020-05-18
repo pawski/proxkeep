@@ -3,16 +3,15 @@ package command
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"github.com/pawski/proxkeep/domain/proxy"
 	"github.com/pawski/proxkeep/infrastructure/network/http"
 	"github.com/pawski/proxkeep/infrastructure/repository"
 	"math"
-	"runtime"
 	"sync"
 )
 
-var maxConcurrentChecks = 50
+var maxConcurrentChecks = 20
+var testUrl = "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf"
 
 type RunCommand struct {
 	logger          proxy.Logger
@@ -25,10 +24,6 @@ func NewRunCommand(repository *repository.ProxyServerRepository, logger proxy.Lo
 
 func (c *RunCommand) Execute() error {
 	var wg sync.WaitGroup
-
-	c.logger.Infof("Max parallel checks: %v", runtime.GOMAXPROCS(-1))
-
-	testUrl := "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf"
 
 	expectedResponse, err := http.DirectFetch(testUrl)
 
@@ -47,13 +42,15 @@ func (c *RunCommand) Execute() error {
 	semaphore := make(chan struct{}, maxConcurrentChecks)
 
 	wg.Add(1)
-	go func(workQueue <-chan proxy.ServerEntity) {
+	go func(workQueue <-chan proxy.ServerEntity, wg *sync.WaitGroup) {
+		defer wg.Done()
+
 		for v := range workQueue {
-
-			semaphore <- struct{}{}
-
 			wg.Add(1)
-			go func(proxyServer proxy.ServerEntity, semaphore <-chan struct{}) {
+			semaphore <- struct{}{}
+			go func(proxyServer proxy.ServerEntity, semaphore <-chan struct{}, wg *sync.WaitGroup) {
+				defer wg.Done()
+
 				c.logger.Infof("%v test started", proxyServer.Uid)
 
 				pResponse, pError := http.Fetch(v.Ip, v.Port, testUrl)
@@ -79,24 +76,18 @@ func (c *RunCommand) Execute() error {
 
 				c.proxyRepository.Persist(proxyServer)
 				<-semaphore
-				wg.Done()
-			}(v, semaphore)
+			}(v, semaphore, wg)
 		}
-
-		c.logger.Info("Work queue emptied")
-		wg.Done()
-	}(workQueue)
+	}(workQueue, &wg)
 
 	for _, v := range c.proxyRepository.FindAll() {
+		c.logger.Info("Add one")
 		workQueue <- v
 	}
 
 	close(workQueue)
 
 	wg.Wait()
-
-	c.logger.Info("Waiting for user break")
-	fmt.Scanln()
 
 	return nil
 }

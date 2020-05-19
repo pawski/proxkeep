@@ -25,7 +25,9 @@ func Fetch(host, port, testURL string) (Response, error) {
 	transport.Proxy = http.ProxyURL(&url.URL{Scheme: "http", Host: host + ":" + port})
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
 	client.Transport = &transport
 
 	start := time.Now()

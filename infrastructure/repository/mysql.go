@@ -15,9 +15,9 @@ func NewProxyServerRepository(database *sql.DB, logger proxy.Logger) *ProxyServe
 	return &ProxyServerRepository{database, logger}
 }
 
-func (r *ProxyServerRepository) FindAll() []proxy.ServerEntity {
+func (r *ProxyServerRepository) FindAll() []ServerEntity {
 
-	servers := make([]proxy.ServerEntity, 0)
+	servers := make([]ServerEntity, 0)
 
 	sql := "SELECT id, uid, ip, port, is_available, throughoutput_rate, COALESCE(failure_reason, ''), created_at, updated_at FROM proxy_server ORDER BY updated_at ASC"
 	rows, err := r.db.Query(sql)
@@ -30,7 +30,7 @@ func (r *ProxyServerRepository) FindAll() []proxy.ServerEntity {
 	defer rows.Close()
 
 	for rows.Next() {
-		var s proxy.ServerEntity
+		var s ServerEntity
 		err := rows.Scan(&s.Id, &s.Uid, &s.Ip, &s.Port, &s.IsAvailable, &s.ThroughputRate, &s.FailureReason, &s.CreatedAt, &s.UpdatedAt)
 
 		if err != nil {
@@ -47,11 +47,11 @@ func (r *ProxyServerRepository) FindAll() []proxy.ServerEntity {
 	return servers
 }
 
-func (r *ProxyServerRepository) FindByUid(uid proxy.Uid) proxy.ServerEntity {
-	return proxy.ServerEntity{}
+func (r *ProxyServerRepository) FindByUid(uid proxy.Uid) ServerEntity {
+	return ServerEntity{}
 }
 
-func (r *ProxyServerRepository) Persist(proxyServer proxy.ServerEntity) error {
+func (r *ProxyServerRepository) Persist(proxyServer ServerEntity) error {
 
 	stmt, err := r.db.Prepare("UPDATE proxy_server SET is_available=?, throughoutput_rate=?, failure_reason=?, updated_at=? WHERE uid=?")
 

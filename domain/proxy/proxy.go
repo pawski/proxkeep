@@ -2,14 +2,19 @@ package proxy
 
 type Uid string
 
-type ServerEntity struct {
-	Id             uint
-	Uid            string
-	Ip             string
-	Port           string
-	IsAvailable    bool
-	ThroughputRate float64
-	FailureReason  string
-	CreatedAt      string
-	UpdatedAt      string
+type CheckReport struct {
+	ProxyIdentifier  string
+	ProxyOperational bool
+	ThroughputRate   ThroughputRate
+	FailureReason    string
+}
+
+type ThroughputRate float64
+
+func (t ThroughputRate) AsKiloBytes() float64 {
+	return t.AsBytes() / 1024
+}
+
+func (t ThroughputRate) AsBytes() float64 {
+	return float64(t)
 }

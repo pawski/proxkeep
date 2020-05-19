@@ -44,7 +44,7 @@ func Fetch(host, port, testURL string) (Response, error) {
 
 	if err != nil {
 		logrus.Get().Debug(err)
-		return Response{StatusCode: response.StatusCode, Body: []byte{}, TransferTime: duration}, err
+		return Response{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
 	return Response{StatusCode: response.StatusCode, Body: body, TransferTime: duration}, nil
@@ -74,7 +74,7 @@ func DirectFetch(url string) (Response, error) {
 
 	if err != nil {
 		logrus.Get().Debug(err)
-		return Response{StatusCode: response.StatusCode, Body: []byte{}, TransferTime: duration}, err
+		return Response{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
 	return Response{StatusCode: response.StatusCode, Body: body, TransferTime: duration}, nil

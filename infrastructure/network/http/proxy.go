@@ -2,6 +2,7 @@ package http
 
 import (
 	"crypto/tls"
+	"github.com/pawski/proxkeep/domain/proxy"
 	"github.com/pawski/proxkeep/infrastructure/logger/logrus"
 	"io/ioutil"
 	"net/http"
@@ -9,21 +10,7 @@ import (
 	"time"
 )
 
-type Response struct {
-	Body         []byte
-	StatusCode   int
-	TransferTime float64
-}
-
-func (r Response) BytesThroughputRate() float64 {
-	return float64(len(r.Body)) / r.TransferTime
-}
-
-func (r Response) KiloBytesThroughputRate() float64 {
-	return float64(len(r.Body)/1000) / r.TransferTime
-}
-
-func Fetch(host, port, testURL string) (*Response, error) {
+func Fetch(host, port, testURL string) (*proxy.HttpResponse, error) {
 
 	transport := http.Transport{}
 	transport.Proxy = http.ProxyURL(&url.URL{Scheme: "http", Host: host + ":" + port})
@@ -40,7 +27,7 @@ func Fetch(host, port, testURL string) (*Response, error) {
 
 	if err != nil {
 		logrus.Get().Debug(err)
-		return &Response{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
+		return &proxy.HttpResponse{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
 	defer response.Body.Close()
@@ -48,20 +35,20 @@ func Fetch(host, port, testURL string) (*Response, error) {
 
 	if err != nil {
 		logrus.Get().Debug(err)
-		return &Response{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
+		return &proxy.HttpResponse{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
-	return &Response{StatusCode: response.StatusCode, Body: body, TransferTime: duration}, nil
+	return &proxy.HttpResponse{StatusCode: response.StatusCode, Body: body, TransferTime: duration}, nil
 }
 
-func DirectFetch(url string) (Response, error) {
+func DirectFetch(url string) (proxy.HttpResponse, error) {
 	client := &http.Client{}
 
 	request, err := http.NewRequest("GET", url, nil)
 
 	if err != nil {
 		logrus.Get().Debug(err)
-		return Response{StatusCode: 0, Body: []byte{}, TransferTime: 0}, err
+		return proxy.HttpResponse{StatusCode: 0, Body: []byte{}, TransferTime: 0}, err
 	}
 
 	start := time.Now()
@@ -70,7 +57,7 @@ func DirectFetch(url string) (Response, error) {
 
 	if err != nil {
 		logrus.Get().Debug(err)
-		return Response{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
+		return proxy.HttpResponse{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
 	defer response.Body.Close()
@@ -78,8 +65,8 @@ func DirectFetch(url string) (Response, error) {
 
 	if err != nil {
 		logrus.Get().Debug(err)
-		return Response{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
+		return proxy.HttpResponse{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
-	return Response{StatusCode: response.StatusCode, Body: body, TransferTime: duration}, nil
+	return proxy.HttpResponse{StatusCode: response.StatusCode, Body: body, TransferTime: duration}, nil
 }

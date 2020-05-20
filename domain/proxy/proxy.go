@@ -19,12 +19,6 @@ func (t ThroughputRate) AsBytes() float64 {
 	return float64(t)
 }
 
-type HttpResponse struct {
-	Body         []byte
-	StatusCode   int
-	TransferTime float64
-}
-
 func (r HttpResponse) KiloBytesThroughputRate() float64 {
 	return float64(len(r.Body)/1000) / r.TransferTime
 }

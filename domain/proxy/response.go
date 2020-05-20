@@ -10,7 +10,7 @@ type ResponseTest struct {
 	responseHash [16]byte
 }
 
-func Prepare(testURL string, httpStatusCode int, responseBody []byte) *ResponseTest {
+func NewResponseTest(testURL string, httpStatusCode int, responseBody []byte) *ResponseTest {
 	return &ResponseTest{testURL: testURL, statusCode: httpStatusCode, responseHash: md5.Sum(responseBody)}
 }
 

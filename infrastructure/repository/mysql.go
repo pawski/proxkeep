@@ -15,12 +15,12 @@ func NewProxyServerRepository(database *sql.DB, logger proxy.Logger) *ProxyServe
 	return &ProxyServerRepository{database, logger}
 }
 
-func (r *ProxyServerRepository) FindAll() []ServerEntity {
+func (r *ProxyServerRepository) FindAll() []proxy.Server {
 
-	servers := make([]ServerEntity, 0)
+	servers := make([]proxy.Server, 0)
 
-	sql := "SELECT id, uid, ip, port, is_available, throughoutput_rate, COALESCE(failure_reason, ''), created_at, updated_at FROM proxy_server ORDER BY updated_at ASC"
-	rows, err := r.db.Query(sql)
+	query := "SELECT uid, ip, port, is_available, throughoutput_rate, COALESCE(failure_reason, '') FROM proxy_server ORDER BY updated_at ASC"
+	rows, err := r.db.Query(query)
 
 	if err != nil {
 		r.logger.Errorf("Failed to retrieve ProxyServers. %v", err)
@@ -30,8 +30,8 @@ func (r *ProxyServerRepository) FindAll() []ServerEntity {
 	defer rows.Close()
 
 	for rows.Next() {
-		var s ServerEntity
-		err := rows.Scan(&s.Id, &s.Uid, &s.Ip, &s.Port, &s.IsAvailable, &s.ThroughputRate, &s.FailureReason, &s.CreatedAt, &s.UpdatedAt)
+		var s proxy.Server
+		err := rows.Scan(&s.Uid, &s.Ip, &s.Port, &s.IsAvailable, &s.ThroughputRate, &s.FailureReason)
 
 		if err != nil {
 			r.logger.Fatal(err)
@@ -47,11 +47,11 @@ func (r *ProxyServerRepository) FindAll() []ServerEntity {
 	return servers
 }
 
-func (r *ProxyServerRepository) FindByUid(uid proxy.Uid) ServerEntity {
-	return ServerEntity{}
+func (r *ProxyServerRepository) FindByUid(uid proxy.Uid) proxy.Server {
+	return proxy.Server{}
 }
 
-func (r *ProxyServerRepository) Persist(proxyServer *ServerEntity) error {
+func (r *ProxyServerRepository) Persist(s proxy.Server) error {
 
 	stmt, err := r.db.Prepare("UPDATE proxy_server SET is_available=?, throughoutput_rate=?, failure_reason=?, updated_at=? WHERE uid=?")
 
@@ -61,7 +61,7 @@ func (r *ProxyServerRepository) Persist(proxyServer *ServerEntity) error {
 	}
 
 	updatedAt := time.Now().UTC()
-	res, err := stmt.Exec(proxyServer.IsAvailable, proxyServer.ThroughputRate, proxyServer.FailureReason, updatedAt.Format(time.RFC3339), proxyServer.Uid)
+	res, err := stmt.Exec(s.IsAvailable, s.ThroughputRate, s.FailureReason, updatedAt.Format(time.RFC3339), s.Uid)
 
 	if err != nil {
 		r.logger.Errorf("Failed to execute persist statement for ProxyServer. %v", err)

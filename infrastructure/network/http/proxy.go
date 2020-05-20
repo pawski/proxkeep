@@ -10,13 +10,20 @@ import (
 	"time"
 )
 
-func Fetch(host, port, testURL string) (*proxy.HttpResponse, error) {
+type httpClient struct {
+}
+
+func NewHttpClient() *httpClient {
+	return &httpClient{}
+}
+
+func (h *httpClient) Fetch(host, port, testURL string) (*proxy.HttpResponse, error) {
 
 	transport := http.Transport{}
 	transport.Proxy = http.ProxyURL(&url.URL{Scheme: "http", Host: host + ":" + port})
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
-	client := &http.Client{
+	client := http.Client{
 		Timeout: time.Second * 10,
 	}
 	client.Transport = &transport
@@ -41,8 +48,8 @@ func Fetch(host, port, testURL string) (*proxy.HttpResponse, error) {
 	return &proxy.HttpResponse{StatusCode: response.StatusCode, Body: body, TransferTime: duration}, nil
 }
 
-func DirectFetch(url string) (proxy.HttpResponse, error) {
-	client := &http.Client{}
+func (h *httpClient) DirectFetch(url string) (proxy.HttpResponse, error) {
+	client := http.Client{}
 
 	request, err := http.NewRequest("GET", url, nil)
 

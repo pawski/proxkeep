@@ -4,29 +4,25 @@ import (
 	"errors"
 	"fmt"
 	"github.com/pawski/proxkeep/domain/proxy"
-	"github.com/pawski/proxkeep/infrastructure/network/http"
-	"github.com/pawski/proxkeep/infrastructure/repository"
-	"math"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 )
 
-var stopFeedingQueue = false
-
 type RunCommand struct {
-	logger          proxy.Logger
-	proxyRepository *repository.ProxyServerRepository
+	proxyTester      *proxy.Tester
+	proxyRepository  proxy.ReadWriteRepository
+	logger           proxy.Logger
+	wg               sync.WaitGroup
+	stopFeedingQueue bool
 }
 
-func NewRunCommand(repository *repository.ProxyServerRepository, logger proxy.Logger) *RunCommand {
-	return &RunCommand{proxyRepository: repository, logger: logger}
+func NewRunCommand(proxyTester *proxy.Tester, repository proxy.ReadWriteRepository, logger proxy.Logger) *RunCommand {
+	return &RunCommand{proxyRepository: repository, logger: logger, proxyTester: proxyTester, stopFeedingQueue: false}
 }
 
 func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
-	var wg sync.WaitGroup
-
 	if "" == testURL {
 		return errors.New("testURL cannot be empty string")
 	}
@@ -34,44 +30,30 @@ func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
 	if 0 == maxConcurrentChecks {
 		return errors.New("macConcurrentChecks can't be zero")
 	}
-
-	setupTerminationOnSigTerm()
-
 	c.logger.Infof("Max concurrent checks %v", maxConcurrentChecks)
 
-	expectedResponse, err := http.DirectFetch(testURL)
+	c.stopFeedingOnSigTerm()
 
-	if expectedResponse.StatusCode != 200 {
-		return errors.New("test URL returned non 200 expectedResponse code")
-	}
+	c.logger.Infof("Testing using %v", testURL)
+	proxyTest, err := c.proxyTester.PrepareTest(testURL)
 
 	if err != nil {
 		return err
 	}
 
-	c.logger.Infof("Testing using %v", testURL)
 	c.logger.Info("Test data acquired")
-	c.logger.Infof("Main connection Throughput %.3f KB/s", math.Round(expectedResponse.KiloBytesThroughputRate()*1000)/1000)
 
-	proxyTest := proxy.Prepare(testURL, expectedResponse.StatusCode, expectedResponse.Body)
-	workloadQueue := make(chan repository.ServerEntity)
+	workloadQueue := make(chan proxy.Server)
 	semaphore := make(chan struct{}, maxConcurrentChecks)
 
-	wg.Add(1)
-	go func(workQueue <-chan repository.ServerEntity, wg *sync.WaitGroup, semaphore chan struct{}) {
-		defer (*wg).Done()
-		for v := range workQueue {
-			semaphore <- struct{}{}
-			(*wg).Add(1)
-			go c.work(v, semaphore, wg, proxyTest)
-		}
-	}(workloadQueue, &wg, semaphore)
+	c.wg.Add(1)
+	go c.dispatchWorkload(workloadQueue, semaphore, proxyTest)
 
 	proxyList := c.proxyRepository.FindAll()
 	c.logger.Infof("Proxies on list to check %v", len(proxyList))
 
 	for _, v := range proxyList {
-		if stopFeedingQueue {
+		if c.stopFeedingQueue {
 			break
 		}
 		workloadQueue <- v
@@ -79,18 +61,27 @@ func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
 
 	close(workloadQueue)
 
-	wg.Wait()
+	c.wg.Wait()
 
 	return nil
 }
 
-func (c *RunCommand) work(server repository.ServerEntity, sem <-chan struct{}, wg *sync.WaitGroup, test *proxy.ResponseTest) {
+func (c *RunCommand) dispatchWorkload(workQueue <-chan proxy.Server, semaphore chan struct{}, test *proxy.ResponseTest) {
+	defer c.wg.Done()
+	for v := range workQueue {
+		semaphore <- struct{}{}
+		c.wg.Add(1)
+		go c.work(v, semaphore, test)
+	}
+}
+
+func (c *RunCommand) work(server proxy.Server, sem <-chan struct{}, test *proxy.ResponseTest) {
 	defer func() { <-sem }()
-	defer wg.Done()
+	defer c.wg.Done()
 
 	c.logger.Debugf("%v test", server.Uid)
 
-	checkReport := check(server.Ip, server.Port, test)
+	checkReport := c.proxyTester.Check(server.Ip, server.Port, test)
 
 	if checkReport.ProxyOperational {
 		c.logger.Infof("%v OK", server.Uid)
@@ -104,39 +95,19 @@ func (c *RunCommand) work(server repository.ServerEntity, sem <-chan struct{}, w
 	server.FailureReason = checkReport.FailureReason
 	server.ThroughputRate = checkReport.ThroughputRate.AsBytes()
 
-	err := c.proxyRepository.Persist(&server)
+	err := c.proxyRepository.Persist(server)
 	if err != nil {
 		c.logger.Errorf("%v %v", server.Uid, err)
 	}
 }
 
-func check(host string, port string, proxyTest *proxy.ResponseTest) *proxy.CheckReport {
-
-	var proxyReport = proxy.CheckReport{ProxyIdentifier: host + ":" + port}
-
-	pResponse, pError := http.Fetch(host, port, proxyTest.GetTestURL())
-
-	if pError == nil && proxyTest.Passed(pResponse.StatusCode, pResponse.Body) {
-		proxyReport.ProxyOperational = true
-		proxyReport.ThroughputRate = proxy.ThroughputRate(math.Round(pResponse.KiloBytesThroughputRate()*1000) / 1000)
-	} else {
-		proxyReport.ProxyOperational = false
-		proxyReport.ThroughputRate = proxy.ThroughputRate(0)
-		if pError != nil {
-			proxyReport.FailureReason = pError.Error()
-		}
-	}
-
-	return &proxyReport
-}
-
-func setupTerminationOnSigTerm() {
+func (c *RunCommand) stopFeedingOnSigTerm() {
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, os.Interrupt)
 	signal.Notify(s, syscall.SIGTERM)
-	go func() {
+	go func(stopFeeding *bool) {
 		<-s
 		fmt.Println("Feeding queue stopped, waiting for remaining jobs...")
-		stopFeedingQueue = true
-	}()
+		*stopFeeding = true
+	}(&c.stopFeedingQueue)
 }

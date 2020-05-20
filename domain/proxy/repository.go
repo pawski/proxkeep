@@ -6,7 +6,12 @@ type Finder interface {
 }
 
 type Persister interface {
-	Persist(entity Server)
+	Persist(entity Server) error
+}
+
+type ReadWriteRepository interface {
+	Finder
+	Persister
 }
 
 type Server struct {

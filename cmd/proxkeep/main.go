@@ -44,6 +44,7 @@ func main() {
 				}
 
 				return command.NewRunCommand(
+					proxy.NewTester(http.NewHttpClient()),
 					repository.NewProxyServerRepository(db, getLogger()),
 					getLogger()).
 					Execute(appConfig.TestUrl, appConfig.ProxyMaxConcurrentChecks)
@@ -54,14 +55,14 @@ func main() {
 			Usage: "test [ip] [port]",
 			Action: func(c *cli.Context) error {
 				return command.
-					NewTestCommand(getLogger()).
+					NewTestCommand(http.NewHttpClient(), getLogger()).
 					Execute(appConfig.TestUrl, c.Args().Get(0), c.Args().Get(1))
 			},
 		}, cli.Command{
 			Name:  "selftest",
 			Usage: "Takes attempt to fetch test page content",
 			Action: func(c *cli.Context) error {
-				response, err := http.DirectFetch(appConfig.SelfTestUrl)
+				response, err := http.NewHttpClient().DirectFetch(appConfig.SelfTestUrl)
 
 				fmt.Println(response.StatusCode)
 				fmt.Println(string(response.Body))

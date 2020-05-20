@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"database/sql"
-	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pawski/proxkeep/application/command"
@@ -50,46 +48,7 @@ func main() {
 			Name:  "test",
 			Usage: "test [ip] [port]",
 			Action: func(c *cli.Context) error {
-
-				ip := c.Args().Get(0)
-				port := c.Args().Get(1)
-
-				if "" == port {
-					port = "8080"
-				}
-
-				if "" == ip {
-					logrus.Get().Error("IP Address cannot be empty")
-
-					return nil
-				}
-
-				logrus.Get().Infof("Using %v:%v", ip, port)
-
-				testUrl := "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf"
-				response, err := http.DirectFetch(testUrl)
-
-				if response.StatusCode != 200 {
-					return errors.New("test URL returned non 200 response code")
-				}
-
-				if err != nil {
-					return err
-				}
-
-				logrus.Get().Info("Test data acquired")
-				logrus.Get().Infof("Main connection Throughput %.4f KB/s", float64(len(response.Body)/1024)/response.TransferTime)
-
-				pResponse, _ := http.Fetch(ip, port, testUrl)
-
-				if response.StatusCode == pResponse.StatusCode && 0 == bytes.Compare(response.Body, pResponse.Body) {
-					logrus.Get().Info("Proxy - OK")
-					logrus.Get().Infof("Proxy throughput %.4f KB/s", float64(len(pResponse.Body)/1024)/pResponse.TransferTime)
-				} else {
-					logrus.Get().Info("Proxy - NOK")
-				}
-
-				return nil
+				return command.NewTestCommand(logrus.Get()).Execute(c.Args().Get(0), c.Args().Get(1))
 			},
 		}, cli.Command{
 			Name:  "selftest",

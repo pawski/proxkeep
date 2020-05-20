@@ -51,7 +51,7 @@ func (r *ProxyServerRepository) FindByUid(uid proxy.Uid) ServerEntity {
 	return ServerEntity{}
 }
 
-func (r *ProxyServerRepository) Persist(proxyServer ServerEntity) error {
+func (r *ProxyServerRepository) Persist(proxyServer *ServerEntity) error {
 
 	stmt, err := r.db.Prepare("UPDATE proxy_server SET is_available=?, throughoutput_rate=?, failure_reason=?, updated_at=? WHERE uid=?")
 

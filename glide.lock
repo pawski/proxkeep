@@ -1,5 +1,5 @@
-hash: bb10ed915da0ae37ecafe823694edad2040faa290536c639ec83204cafcbaabc
-updated: 2020-05-14T18:33:20.542819+02:00
+hash: 37383745c8cbf59d67a447d0348642ab88c28bc0e8741e05af21e602ebc01aab
+updated: 2020-05-20T13:36:15.267198+02:00
 imports:
 - name: github.com/go-sql-driver/mysql
   version: 17ef3dd9d98b69acec3e85878995ada9533a9370
@@ -16,4 +16,6 @@ imports:
   subpackages:
   - internal/unsafeheader
   - unix
+- name: gopkg.in/yaml.v2
+  version: 0b1645d91e851e735d3e23330303ce81f70adbe3
 testImports: []

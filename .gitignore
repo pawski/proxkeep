@@ -2,3 +2,5 @@ build/*
 !build/.gitkeep
 
 vendor/*
+env.yml
+app.yml

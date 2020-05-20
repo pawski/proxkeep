@@ -9,3 +9,5 @@ import:
 - package: golang.org/x/sys
   repo: git@github.com:golang/sys
   vcs: git
+- package: gopkg.in/yaml.v2
+  version: ~2.3.0

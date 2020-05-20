@@ -5,6 +5,8 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pawski/proxkeep/application/command"
+	"github.com/pawski/proxkeep/application/configuration"
+	"github.com/pawski/proxkeep/domain/proxy"
 	"github.com/pawski/proxkeep/infrastructure/logger/logrus"
 	"github.com/pawski/proxkeep/infrastructure/network/http"
 	"github.com/pawski/proxkeep/infrastructure/repository"
@@ -20,10 +22,12 @@ func main() {
 	app.Usage = "Only Go knows"
 
 	app.Before = func(c *cli.Context) error {
-		logrus.Get().Info(app.Name, " - ", app.Version)
+		getLogger().Info(app.Name, " - ", app.Version)
 
 		return nil
 	}
+
+	appConfig := getAppConfiguration()
 
 	app.Commands = []cli.Command{
 		cli.Command{
@@ -31,30 +35,33 @@ func main() {
 			Usage: "run [ip] [port]",
 			Action: func(c *cli.Context) error {
 
-				db, err := sql.Open("mysql", "root:vagrant@tcp(192.168.55.102)/hrs")
+				envConfig := getEnvConfiguration()
+				db, err := sql.Open("mysql", envConfig.MysqlDSN)
 
 				if err != nil {
-					logrus.Get().Errorln(err)
+					getLogger().Error(err)
 					return err
 				}
 
 				return command.NewRunCommand(
-					repository.NewProxyServerRepository(db, logrus.Get()),
-					logrus.Get()).
-					Execute()
+					repository.NewProxyServerRepository(db, getLogger()),
+					getLogger()).
+					Execute(appConfig.TestUrl, appConfig.ProxyMaxConcurrentChecks)
 
 			},
 		}, cli.Command{
 			Name:  "test",
 			Usage: "test [ip] [port]",
 			Action: func(c *cli.Context) error {
-				return command.NewTestCommand(logrus.Get()).Execute(c.Args().Get(0), c.Args().Get(1))
+				return command.
+					NewTestCommand(getLogger()).
+					Execute(appConfig.TestUrl, c.Args().Get(0), c.Args().Get(1))
 			},
 		}, cli.Command{
 			Name:  "selftest",
 			Usage: "Takes attempt to fetch test page content",
 			Action: func(c *cli.Context) error {
-				response, err := http.DirectFetch("http://ifconfig.io/all.json")
+				response, err := http.DirectFetch(appConfig.SelfTestUrl)
 
 				fmt.Println(response.StatusCode)
 				fmt.Println(string(response.Body))
@@ -67,6 +74,32 @@ func main() {
 	appErr := app.Run(os.Args)
 
 	if appErr != nil {
-		logrus.Get().Fatal(appErr)
+		getLogger().Fatal(appErr)
 	}
+}
+
+func getEnvConfiguration() configuration.EnvConfig {
+	cfg, err := configuration.GetEnv()
+
+	if err != nil {
+		getLogger().Error("Cannot load Env Configuration")
+		panic(err)
+	}
+
+	return cfg
+}
+
+func getAppConfiguration() configuration.AppConfig {
+	cfg, err := configuration.GetApp()
+
+	if err != nil {
+		getLogger().Error("Cannot load App Configuration, using defaults. Cause: %v", err)
+		cfg = configuration.GetAppDefaults()
+	}
+
+	return cfg
+}
+
+func getLogger() proxy.Logger {
+	return logrus.Get()
 }

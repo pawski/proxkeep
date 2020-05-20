@@ -1,0 +1,3 @@
+test_url: https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf
+self_test_url: http://ifconfig.io/all.json
+proxy_max_concurrent_checks: 50

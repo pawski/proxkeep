@@ -1,7 +1,6 @@
 package command
 
 import (
-	"bytes"
 	"errors"
 	"github.com/pawski/proxkeep/domain/proxy"
 	"github.com/pawski/proxkeep/infrastructure/network/http"
@@ -15,7 +14,7 @@ func NewTestCommand(logger proxy.Logger) *TestCommand {
 	return &TestCommand{logger: logger}
 }
 
-func (c *TestCommand) Execute(ip, port string) error {
+func (c *TestCommand) Execute(testURL, ip, port string) error {
 	if "" == port {
 		port = "8080"
 	}
@@ -28,8 +27,7 @@ func (c *TestCommand) Execute(ip, port string) error {
 
 	c.logger.Infof("Using %v:%v", ip, port)
 
-	testUrl := "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf"
-	response, err := http.DirectFetch(testUrl)
+	response, err := http.DirectFetch(testURL)
 
 	if response.StatusCode != 200 {
 		return errors.New("test URL returned non 200 response code")
@@ -40,13 +38,15 @@ func (c *TestCommand) Execute(ip, port string) error {
 	}
 
 	c.logger.Info("Test data acquired")
-	c.logger.Infof("Main connection Throughput %.4f KB/s", float64(len(response.Body)/1024)/response.TransferTime)
+	c.logger.Infof("Main connection Throughput %.3f KB/s", response.BytesThroughputRate()/1024)
 
-	pResponse, _ := http.Fetch(ip, port, testUrl)
+	test := proxy.Prepare(testURL, response.StatusCode, response.Body)
 
-	if response.StatusCode == pResponse.StatusCode && 0 == bytes.Compare(response.Body, pResponse.Body) {
+	pResponse, _ := http.Fetch(ip, port, test.GetTestURL())
+
+	if test.Passed(pResponse.StatusCode, pResponse.Body) {
 		c.logger.Info("Proxy - OK")
-		c.logger.Infof("Proxy throughput %.4f KB/s", float64(len(pResponse.Body)/1024)/pResponse.TransferTime)
+		c.logger.Infof("Proxy throughput %.3f KB/s", pResponse.BytesThroughputRate()/1024)
 	} else {
 		c.logger.Info("Proxy - NOK")
 	}

@@ -19,7 +19,7 @@ func (r Response) BytesThroughputRate() float64 {
 	return float64(len(r.Body)) / r.TransferTime
 }
 
-func Fetch(host, port, testURL string) (Response, error) {
+func Fetch(host, port, testURL string) (*Response, error) {
 
 	transport := http.Transport{}
 	transport.Proxy = http.ProxyURL(&url.URL{Scheme: "http", Host: host + ":" + port})
@@ -36,7 +36,7 @@ func Fetch(host, port, testURL string) (Response, error) {
 
 	if err != nil {
 		logrus.Get().Debug(err)
-		return Response{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
+		return &Response{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
 	defer response.Body.Close()
@@ -44,10 +44,10 @@ func Fetch(host, port, testURL string) (Response, error) {
 
 	if err != nil {
 		logrus.Get().Debug(err)
-		return Response{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
+		return &Response{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
-	return Response{StatusCode: response.StatusCode, Body: body, TransferTime: duration}, nil
+	return &Response{StatusCode: response.StatusCode, Body: body, TransferTime: duration}, nil
 }
 
 func DirectFetch(url string) (Response, error) {

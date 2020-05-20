@@ -13,7 +13,7 @@ import (
 	"syscall"
 )
 
-var maxConcurrentChecks = 20
+var maxConcurrentChecks = 100
 var testUrl = "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf"
 var stopFeedingQueue = false
 
@@ -27,9 +27,11 @@ func NewRunCommand(repository *repository.ProxyServerRepository, logger proxy.Lo
 }
 
 func (c *RunCommand) Execute() error {
+	var wg sync.WaitGroup
+
 	setupTerminationOnSigTerm()
 
-	var wg sync.WaitGroup
+	c.logger.Infof("Max concurrent checks %v", maxConcurrentChecks)
 
 	expectedResponse, err := http.DirectFetch(testUrl)
 
@@ -43,7 +45,6 @@ func (c *RunCommand) Execute() error {
 
 	c.logger.Info("Test data acquired")
 	c.logger.Infof("Main connection Throughput %.3f KB/s", math.Round((expectedResponse.BytesThroughputRate()/1024)*1000)/1000)
-	c.logger.Infof("Max concurrent checks %v", maxConcurrentChecks)
 
 	proxyTest := proxy.Prepare(expectedResponse.StatusCode, expectedResponse.Body)
 	workloadQueue := make(chan repository.ServerEntity)
@@ -51,33 +52,11 @@ func (c *RunCommand) Execute() error {
 
 	wg.Add(1)
 	go func(workQueue <-chan repository.ServerEntity, wg *sync.WaitGroup) {
-		defer wg.Done()
-
+		defer (*wg).Done()
 		for v := range workQueue {
-			wg.Add(1)
+			(*wg).Add(1)
 			semaphore <- struct{}{}
-			go func(proxyServer repository.ServerEntity, semaphore <-chan struct{}, wg *sync.WaitGroup) {
-				defer wg.Done()
-
-				c.logger.Debugf("%v test", proxyServer.Uid)
-
-				report := check(v.Ip, v.Port, testUrl, proxyTest)
-
-				if report.ProxyOperational {
-					c.logger.Infof("%v OK", proxyServer.Uid)
-					c.logger.Infof("%v throughput %.3f KB/s", proxyServer.Uid, report.ThroughputRate)
-				} else {
-					c.logger.Infof("%v NOK", proxyServer.Uid)
-					c.logger.Debugf("%v failure reason %v", proxyServer.Uid, report.FailureReason)
-				}
-
-				proxyServer.IsAvailable = report.ProxyOperational
-				proxyServer.FailureReason = report.FailureReason
-				proxyServer.ThroughputRate = report.ThroughputRate.AsBytes()
-
-				c.proxyRepository.Persist(proxyServer)
-				<-semaphore
-			}(v, semaphore, wg)
+			go c.work(v, semaphore, wg, proxyTest)
 		}
 	}(workloadQueue, &wg)
 
@@ -98,13 +77,39 @@ func (c *RunCommand) Execute() error {
 	return nil
 }
 
+func (c *RunCommand) work(server repository.ServerEntity, sem <-chan struct{}, wg *sync.WaitGroup, test *proxy.ResponseTest) {
+	defer func() { <-sem }()
+	defer wg.Done()
+
+	c.logger.Debugf("%v test", server.Uid)
+
+	checkReport := check(server.Ip, server.Port, testUrl, test)
+
+	if checkReport.ProxyOperational {
+		c.logger.Infof("%v OK", server.Uid)
+		c.logger.Infof("%v throughput %.3f KB/s", server.Uid, checkReport.ThroughputRate)
+	} else {
+		c.logger.Infof("%v NOK", server.Uid)
+		c.logger.Debugf("%v failure reason %v", server.Uid, checkReport.FailureReason)
+	}
+
+	server.IsAvailable = checkReport.ProxyOperational
+	server.FailureReason = checkReport.FailureReason
+	server.ThroughputRate = checkReport.ThroughputRate.AsBytes()
+
+	err := c.proxyRepository.Persist(server)
+	if err != nil {
+		c.logger.Errorf("%v %v", server.Uid, err)
+	}
+}
+
 func check(host string, port string, testURL string, proxyTest *proxy.ResponseTest) *proxy.CheckReport {
 
-	var proxyReport = &proxy.CheckReport{ProxyIdentifier: host + ":" + port}
+	var proxyReport = proxy.CheckReport{ProxyIdentifier: host + ":" + port}
 
 	pResponse, pError := http.Fetch(host, port, testURL)
 
-	if pError != nil && proxyTest.Passed(pResponse.StatusCode, pResponse.Body) {
+	if pError == nil && proxyTest.Passed(pResponse.StatusCode, pResponse.Body) {
 		proxyReport.ProxyOperational = true
 		proxyReport.ThroughputRate = proxy.ThroughputRate(math.Round((pResponse.BytesThroughputRate()/1024)*1000) / 1000)
 	} else {
@@ -115,7 +120,7 @@ func check(host string, port string, testURL string, proxyTest *proxy.ResponseTe
 		}
 	}
 
-	return proxyReport
+	return &proxyReport
 }
 
 func setupTerminationOnSigTerm() {

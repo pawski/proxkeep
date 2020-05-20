@@ -16,5 +16,4 @@ type Server struct {
 	IsAvailable    bool
 	ThroughputRate float64
 	FailureReason  string
-	UpdatedAt      string
 }

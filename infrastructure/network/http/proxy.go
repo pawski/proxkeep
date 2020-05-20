@@ -19,6 +19,10 @@ func (r Response) BytesThroughputRate() float64 {
 	return float64(len(r.Body)) / r.TransferTime
 }
 
+func (r Response) KiloBytesThroughputRate() float64 {
+	return float64(len(r.Body)/1000) / r.TransferTime
+}
+
 func Fetch(host, port, testURL string) (*Response, error) {
 
 	transport := http.Transport{}

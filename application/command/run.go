@@ -51,7 +51,7 @@ func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
 
 	c.logger.Infof("Testing using %v", testURL)
 	c.logger.Info("Test data acquired")
-	c.logger.Infof("Main connection Throughput %.3f KB/s", math.Round((expectedResponse.BytesThroughputRate()/1024)*1000)/1000)
+	c.logger.Infof("Main connection Throughput %.3f KB/s", math.Round(expectedResponse.KiloBytesThroughputRate()*1000)/1000)
 
 	proxyTest := proxy.Prepare(testURL, expectedResponse.StatusCode, expectedResponse.Body)
 	workloadQueue := make(chan repository.ServerEntity)
@@ -118,7 +118,7 @@ func check(host string, port string, proxyTest *proxy.ResponseTest) *proxy.Check
 
 	if pError == nil && proxyTest.Passed(pResponse.StatusCode, pResponse.Body) {
 		proxyReport.ProxyOperational = true
-		proxyReport.ThroughputRate = proxy.ThroughputRate(math.Round((pResponse.BytesThroughputRate()/1024)*1000) / 1000)
+		proxyReport.ThroughputRate = proxy.ThroughputRate(math.Round(pResponse.KiloBytesThroughputRate()*1000) / 1000)
 	} else {
 		proxyReport.ProxyOperational = false
 		proxyReport.ThroughputRate = proxy.ThroughputRate(0)

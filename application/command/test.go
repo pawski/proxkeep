@@ -38,7 +38,7 @@ func (c *TestCommand) Execute(testURL, ip, port string) error {
 	}
 
 	c.logger.Info("Test data acquired")
-	c.logger.Infof("Main connection Throughput %.3f KB/s", response.BytesThroughputRate()/1024)
+	c.logger.Infof("Main connection Throughput %.3f KB/s", response.KiloBytesThroughputRate())
 
 	test := proxy.Prepare(testURL, response.StatusCode, response.Body)
 
@@ -46,7 +46,7 @@ func (c *TestCommand) Execute(testURL, ip, port string) error {
 
 	if test.Passed(pResponse.StatusCode, pResponse.Body) {
 		c.logger.Info("Proxy - OK")
-		c.logger.Infof("Proxy throughput %.3f KB/s", pResponse.BytesThroughputRate()/1024)
+		c.logger.Infof("Proxy throughput %.3f KB/s", pResponse.KiloBytesThroughputRate())
 	} else {
 		c.logger.Info("Proxy - NOK")
 	}

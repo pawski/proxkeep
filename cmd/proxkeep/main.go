@@ -94,7 +94,7 @@ func getAppConfiguration() configuration.AppConfig {
 	cfg, err := configuration.GetApp()
 
 	if err != nil {
-		getLogger().Error("Cannot load App Configuration, using defaults. Cause: %v", err)
+		getLogger().Errorf("Cannot load App Configuration, using defaults. Cause: %v", err)
 		cfg = configuration.GetAppDefaults()
 	}
 

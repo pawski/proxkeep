@@ -79,8 +79,6 @@ func (c *RunCommand) work(server proxy.Server, sem <-chan struct{}, test *proxy.
 	defer func() { <-sem }()
 	defer c.wg.Done()
 
-	c.logger.Debugf("%v test", server.Uid)
-
 	checkReport := c.proxyTester.Check(server.Ip, server.Port, test)
 
 	if checkReport.ProxyOperational {

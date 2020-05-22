@@ -3,7 +3,6 @@ package http
 import (
 	"crypto/tls"
 	"github.com/pawski/proxkeep/domain/proxy"
-	"github.com/pawski/proxkeep/infrastructure/logger/logrus"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -12,10 +11,11 @@ import (
 
 type httpClient struct {
 	httpConnectionTimeout uint
+	logger                proxy.Logger
 }
 
-func NewHttpClient(connectionTimeout uint) *httpClient {
-	return &httpClient{httpConnectionTimeout: connectionTimeout}
+func NewHttpClient(connectionTimeout uint, logger proxy.Logger) *httpClient {
+	return &httpClient{httpConnectionTimeout: connectionTimeout, logger: logger}
 }
 
 func (h *httpClient) Fetch(host, port, testURL string) (*proxy.HttpResponse, error) {
@@ -34,7 +34,7 @@ func (h *httpClient) Fetch(host, port, testURL string) (*proxy.HttpResponse, err
 	duration := time.Since(start).Seconds()
 
 	if err != nil {
-		logrus.Get().Debug(err)
+		h.logger.Debug(err)
 		return &proxy.HttpResponse{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
@@ -42,7 +42,7 @@ func (h *httpClient) Fetch(host, port, testURL string) (*proxy.HttpResponse, err
 	body, err := ioutil.ReadAll(response.Body)
 
 	if err != nil {
-		logrus.Get().Debug(err)
+		h.logger.Debug(err)
 		return &proxy.HttpResponse{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
@@ -55,7 +55,7 @@ func (h *httpClient) DirectFetch(url string) (proxy.HttpResponse, error) {
 	request, err := http.NewRequest("GET", url, nil)
 
 	if err != nil {
-		logrus.Get().Debug(err)
+		h.logger.Debug(err)
 		return proxy.HttpResponse{StatusCode: 0, Body: []byte{}, TransferTime: 0}, err
 	}
 
@@ -64,7 +64,7 @@ func (h *httpClient) DirectFetch(url string) (proxy.HttpResponse, error) {
 	duration := time.Since(start).Seconds()
 
 	if err != nil {
-		logrus.Get().Debug(err)
+		h.logger.Debug(err)
 		return proxy.HttpResponse{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 
@@ -72,7 +72,7 @@ func (h *httpClient) DirectFetch(url string) (proxy.HttpResponse, error) {
 	body, err := ioutil.ReadAll(response.Body)
 
 	if err != nil {
-		logrus.Get().Debug(err)
+		h.logger.Debug(err)
 		return proxy.HttpResponse{StatusCode: 0, Body: []byte{}, TransferTime: duration}, err
 	}
 

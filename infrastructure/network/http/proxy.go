@@ -11,10 +11,11 @@ import (
 )
 
 type httpClient struct {
+	httpConnectionTimeout uint
 }
 
-func NewHttpClient() *httpClient {
-	return &httpClient{}
+func NewHttpClient(connectionTimeout uint) *httpClient {
+	return &httpClient{httpConnectionTimeout: connectionTimeout}
 }
 
 func (h *httpClient) Fetch(host, port, testURL string) (*proxy.HttpResponse, error) {
@@ -24,7 +25,7 @@ func (h *httpClient) Fetch(host, port, testURL string) (*proxy.HttpResponse, err
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	client := http.Client{
-		Timeout: time.Second * 10,
+		Timeout: time.Second * time.Duration(h.httpConnectionTimeout),
 	}
 	client.Transport = &transport
 

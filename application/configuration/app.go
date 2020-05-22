@@ -12,6 +12,7 @@ type AppConfig struct {
 	TestUrl                  string `yaml:"test_url"`
 	SelfTestUrl              string `yaml:"self_test_url"`
 	ProxyMaxConcurrentChecks uint   `yaml:"proxy_max_concurrent_checks"`
+	HttpTimeout              uint   `yaml:"http_timeout"`
 }
 
 func GetApp() (AppConfig, error) {
@@ -35,5 +36,6 @@ func GetAppDefaults() AppConfig {
 		SelfTestUrl:              "http://ifconfig.io/all.json",
 		TestUrl:                  "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf",
 		ProxyMaxConcurrentChecks: 10,
+		HttpTimeout:              10,
 	}
 }

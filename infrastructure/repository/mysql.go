@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const updateAtDateFormat = "2006-01-02 15:04:05"
+
 type ProxyServerRepository struct {
 	db     *sql.DB
 	logger proxy.Logger
@@ -61,7 +63,7 @@ func (r *ProxyServerRepository) Persist(s proxy.Server) error {
 	}
 
 	updatedAt := time.Now().UTC()
-	res, err := stmt.Exec(s.IsAvailable, s.ThroughputRate, s.FailureReason, updatedAt.Format(time.RFC3339), s.Uid)
+	res, err := stmt.Exec(s.IsAvailable, s.ThroughputRate, s.FailureReason, updatedAt.Format(updateAtDateFormat), s.Uid)
 
 	if err != nil {
 		r.logger.Errorf("Failed to execute persist statement for ProxyServer. %v", err)

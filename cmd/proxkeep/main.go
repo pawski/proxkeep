@@ -8,7 +8,7 @@ import (
 	"github.com/pawski/proxkeep/application/configuration"
 	"github.com/pawski/proxkeep/domain/proxy"
 	"github.com/pawski/proxkeep/infrastructure/logger/logrus"
-	"github.com/pawski/proxkeep/infrastructure/network/http"
+	"github.com/pawski/proxkeep/infrastructure/network/http_client"
 	"github.com/pawski/proxkeep/infrastructure/repository"
 	"github.com/urfave/cli"
 	"os"
@@ -44,7 +44,7 @@ func main() {
 				}
 
 				return command.NewRunCommand(
-					proxy.NewTester(http.NewHttpClient(appConfig.HttpTimeout, getLogger())),
+					proxy.NewTester(http_client.NewHttpClient(appConfig.HttpTimeout, getLogger())),
 					repository.NewProxyServerRepository(db, getLogger()),
 					getLogger()).
 					Execute(appConfig.TestUrl, appConfig.ProxyMaxConcurrentChecks)
@@ -55,14 +55,14 @@ func main() {
 			Usage: "test [ip] [port]",
 			Action: func(c *cli.Context) error {
 				return command.
-					NewTestCommand(http.NewHttpClient(appConfig.HttpTimeout, getLogger()), getLogger()).
+					NewTestCommand(http_client.NewHttpClient(appConfig.HttpTimeout, getLogger()), getLogger()).
 					Execute(appConfig.TestUrl, c.Args().Get(0), c.Args().Get(1))
 			},
 		}, cli.Command{
 			Name:  "selftest",
 			Usage: "Takes attempt to fetch test page content",
 			Action: func(c *cli.Context) error {
-				response, err := http.NewHttpClient(appConfig.HttpTimeout, getLogger()).DirectFetch(appConfig.SelfTestUrl)
+				response, err := http_client.NewHttpClient(appConfig.HttpTimeout, getLogger()).DirectFetch(appConfig.SelfTestUrl)
 
 				fmt.Println(response.StatusCode)
 				fmt.Println(string(response.Body))

@@ -11,14 +11,6 @@ type CheckReport struct {
 
 type ThroughputRate float64
 
-func (t ThroughputRate) AsKiloBytes() float64 {
-	return t.AsBytes() / 1024
-}
-
-func (t ThroughputRate) AsBytes() float64 {
-	return float64(t)
-}
-
-func (r HttpResponse) KiloBytesThroughputRate() float64 {
+func (r *HttpResponse) KiloBytesThroughputRate() float64 {
 	return float64(len(r.Body)/1000) / r.TransferTime
 }

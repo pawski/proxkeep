@@ -20,7 +20,7 @@ type RunCommand struct {
 	wg               sync.WaitGroup
 	stopFeedingQueue bool
 	statsServer      *http.Server
-	processedTotal   *stats.Stats
+	totalToProcess   int64
 	processedOk      *stats.Stats
 	processedNok     *stats.Stats
 }
@@ -31,7 +31,6 @@ func NewRunCommand(proxyTester *proxy.Tester, repository proxy.ReadWriteReposito
 
 func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
 
-	c.processedTotal = &stats.Stats{}
 	c.processedOk = &stats.Stats{}
 	c.processedNok = &stats.Stats{}
 
@@ -40,7 +39,9 @@ func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
 
 	serveMux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		// Math between total ok and nok might moth math under certain conditions (separate counters updated in different point in time), but that is ok at atm.
-		fmt.Fprintf(writer, "Processed servers: %v, OK: %v, NOK: %v", c.processedTotal.Count(), c.processedOk.Count(), c.processedNok.Count())
+		okCnt := c.processedOk.Count()
+		nokCnt := c.processedNok.Count()
+		fmt.Fprintf(writer, "Processed servers: %v, OK: %v, NOK: %v. Remaining: %v", okCnt+nokCnt, okCnt, nokCnt, c.totalToProcess-(okCnt+nokCnt))
 	})
 
 	c.statsServer.RegisterOnShutdown(func() {
@@ -82,7 +83,8 @@ func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
 	go c.dispatchWorkload(workloadQueue, semaphore, proxyTest)
 
 	proxyList := c.proxyRepository.FindAll()
-	c.logger.Infof("Proxies on list to check %v", len(proxyList))
+	c.totalToProcess = int64(len(proxyList))
+	c.logger.Infof("Proxies on list to check %v", c.totalToProcess)
 
 	for _, v := range proxyList {
 		if c.stopFeedingQueue {
@@ -139,8 +141,6 @@ func (c *RunCommand) work(server proxy.Server, sem <-chan struct{}, test *proxy.
 	if err != nil {
 		c.logger.Errorf("%v %v", server.Uid, err)
 	}
-
-	c.processedTotal.Add()
 }
 
 func (c *RunCommand) stopFeedingOnSigTerm() {

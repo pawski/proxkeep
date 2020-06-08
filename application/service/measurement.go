@@ -39,6 +39,7 @@ func (m *Measurement) AddNok() {
 }
 
 func (m *Measurement) SetTotal(total int64) {
+	fmt.Print("EHLO!")
 	m.values.totalToProcess = total
 }
 

@@ -6,6 +6,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pawski/proxkeep/application/command"
 	"github.com/pawski/proxkeep/application/configuration"
+	"github.com/pawski/proxkeep/application/service"
 	"github.com/pawski/proxkeep/domain/proxy"
 	"github.com/pawski/proxkeep/infrastructure/logger/logrus"
 	"github.com/pawski/proxkeep/infrastructure/network/http_client"
@@ -46,7 +47,8 @@ func main() {
 				return command.NewRunCommand(
 					proxy.NewTester(http_client.NewHttpClient(appConfig.HttpTimeout, getLogger())),
 					repository.NewProxyServerRepository(db, getLogger()),
-					getLogger()).
+					getLogger(),
+					service.NewMeasurement(getLogger())).
 					Execute(appConfig.TestUrl, appConfig.ProxyMaxConcurrentChecks)
 
 			},

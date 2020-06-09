@@ -1,6 +1,8 @@
 package stats
 
-import "fmt"
+import (
+	"github.com/pawski/proxkeep/domain/proxy"
+)
 
 const (
 	ProcessedOk    = "ok"
@@ -17,10 +19,11 @@ type Subscriber chan EventData
 
 type EventBus struct {
 	subscribers map[string][]Subscriber
+	logger      proxy.Logger
 }
 
-func NewEventBus() *EventBus {
-	return &EventBus{subscribers: map[string][]Subscriber{}}
+func NewEventBus(l proxy.Logger) *EventBus {
+	return &EventBus{subscribers: map[string][]Subscriber{}, logger: l}
 }
 
 func (bus *EventBus) Publish(event EventData) {
@@ -34,8 +37,7 @@ func (bus *EventBus) Publish(event EventData) {
 		return
 	}
 
-	// TODO Use logger here
-	fmt.Printf("No subscriber for %v", event.Topic)
+	bus.logger.Infof("No subscriber for %v", event.Topic)
 }
 
 func (bus *EventBus) Subscribe(topic string, subscriber Subscriber) {

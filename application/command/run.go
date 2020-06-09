@@ -2,7 +2,6 @@ package command
 
 import (
 	"errors"
-	"fmt"
 	"github.com/pawski/proxkeep/application/service"
 	"github.com/pawski/proxkeep/domain/proxy"
 	"os"
@@ -43,6 +42,12 @@ func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
 		return err
 	}
 
+	err = c.measurementService.StopHTTP()
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -53,7 +58,7 @@ func (c *RunCommand) stopFeedingOnSigTerm() {
 
 	go func(testService *service.ProxyTester) {
 		<-s
-		fmt.Println("Feeding queue stopped, waiting for remaining jobs...")
+		c.logger.Infof("Feeding queue stopped, waiting for remaining jobs...")
 		testService.GracefulShutdown()
 	}(c.testService)
 }

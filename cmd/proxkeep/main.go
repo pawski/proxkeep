@@ -45,7 +45,7 @@ func main() {
 					return err
 				}
 
-				eb := stats.NewEventBus()
+				eb := stats.NewEventBus(getLogger())
 				return command.NewRunCommand(
 					service.NewProxyTester(
 						proxy.NewTester(http_client.NewHttpClient(appConfig.HttpTimeout, getLogger())),

@@ -74,11 +74,11 @@ func (c *ProxyTester) work(server proxy.Server, sem <-chan struct{}, test *proxy
 
 	if checkReport.ProxyOperational {
 		c.logger.Infof("%v OK", server.Uid)
-		c.logger.Infof("%v throughput %.3f KB/s", server.Uid, checkReport.ThroughputRate)
+		c.logger.Infof("%v Throughput %.3f KB/s", server.Uid, checkReport.ThroughputRate)
 		c.events.Publish(stats.EventData{Topic: stats.ProcessedOk, Data: struct{}{}})
 	} else {
 		c.logger.Infof("%v NOK", server.Uid)
-		c.logger.Debugf("%v failure reason %v", server.Uid, checkReport.FailureReason)
+		c.logger.Debugf("%v Failure reason %v", server.Uid, checkReport.FailureReason)
 		c.events.Publish(stats.EventData{Topic: stats.ProcessedNok, Data: struct{}{}})
 	}
 

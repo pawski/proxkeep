@@ -9,10 +9,11 @@ import (
 	"sync"
 )
 
-type Measurement struct {
+type MeasurementService struct {
 	wg          sync.WaitGroup
 	statsServer *http.Server
 	logger      proxy.Logger
+	eventBus    *stats.EventBus
 	values      measurements
 }
 
@@ -22,28 +23,64 @@ type measurements struct {
 	totalToProcess int64
 }
 
-func NewMeasurement(l proxy.Logger) *Measurement {
-	return &Measurement{logger: l, values: measurements{
+func NewMeasurement(bus *stats.EventBus, l proxy.Logger) *MeasurementService {
+	return &MeasurementService{eventBus: bus, logger: l, values: measurements{
 		processedOk:    &stats.Stats{},
 		processedNok:   &stats.Stats{},
 		totalToProcess: 0,
 	}}
 }
 
-func (m *Measurement) AddOk() {
+func (m *MeasurementService) SubscribeOk() {
+
+	pOkSubscriber := make(stats.Subscriber)
+
+	go func(subscriber stats.Subscriber, measurement *MeasurementService) {
+		for _ = range subscriber {
+			measurement.addOk()
+		}
+	}(pOkSubscriber, m)
+
+	m.eventBus.Subscribe(stats.ProcessedOk, pOkSubscriber)
+}
+
+func (m *MeasurementService) addOk() {
 	m.values.processedOk.Add()
 }
 
-func (m *Measurement) AddNok() {
+func (m *MeasurementService) addNok() {
 	m.values.processedNok.Add()
 }
 
-func (m *Measurement) SetTotal(total int64) {
-	fmt.Print("EHLO!")
+func (m *MeasurementService) SubscribeNok() {
+	pNokSubscriber := make(stats.Subscriber)
+
+	go func(subscriber stats.Subscriber, measurement *MeasurementService) {
+		for _ = range subscriber {
+			measurement.addNok()
+		}
+	}(pNokSubscriber, m)
+
+	m.eventBus.Subscribe(stats.ProcessedNok, pNokSubscriber)
+}
+
+func (m *MeasurementService) setTotal(total int64) {
 	m.values.totalToProcess = total
 }
 
-func (m *Measurement) StartHTTP() {
+func (m *MeasurementService) SubscribeTotal() {
+	pTotalSubscriber := make(stats.Subscriber)
+
+	go func(subscriber stats.Subscriber, measurement *MeasurementService) {
+		for event := range subscriber {
+			measurement.setTotal(event.Data.(int64))
+		}
+	}(pTotalSubscriber, m)
+
+	m.eventBus.Subscribe(stats.TotalToProcess, pTotalSubscriber)
+}
+
+func (m *MeasurementService) StartHTTP() {
 	serveMux := http.NewServeMux()
 	m.statsServer = &http.Server{Addr: ":8000", Handler: serveMux}
 
@@ -66,7 +103,7 @@ func (m *Measurement) StartHTTP() {
 	}()
 }
 
-func (m *Measurement) StopHTTP() error {
+func (m *MeasurementService) StopHTTP() error {
 	m.wg.Add(1)
 	err := m.statsServer.Shutdown(context.Background())
 	m.wg.Wait()

@@ -7,6 +7,7 @@ import (
 	"github.com/pawski/proxkeep/application/command"
 	"github.com/pawski/proxkeep/application/configuration"
 	"github.com/pawski/proxkeep/application/service"
+	"github.com/pawski/proxkeep/application/stats"
 	"github.com/pawski/proxkeep/domain/proxy"
 	"github.com/pawski/proxkeep/infrastructure/logger/logrus"
 	"github.com/pawski/proxkeep/infrastructure/network/http_client"
@@ -44,11 +45,14 @@ func main() {
 					return err
 				}
 
+				eb := stats.NewEventBus()
 				return command.NewRunCommand(
-					proxy.NewTester(http_client.NewHttpClient(appConfig.HttpTimeout, getLogger())),
-					repository.NewProxyServerRepository(db, getLogger()),
+					service.NewProxyTester(
+						proxy.NewTester(http_client.NewHttpClient(appConfig.HttpTimeout, getLogger())),
+						repository.NewProxyServerRepository(db, getLogger()),
+						getLogger(), eb),
 					getLogger(),
-					service.NewMeasurement(getLogger())).
+					service.NewMeasurement(eb, getLogger())).
 					Execute(appConfig.TestUrl, appConfig.ProxyMaxConcurrentChecks)
 
 			},

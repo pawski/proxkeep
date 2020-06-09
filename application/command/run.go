@@ -4,73 +4,40 @@ import (
 	"errors"
 	"fmt"
 	"github.com/pawski/proxkeep/application/service"
-	"github.com/pawski/proxkeep/application/stats"
 	"github.com/pawski/proxkeep/domain/proxy"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 )
 
 type RunCommand struct {
-	proxyTester      *proxy.Tester
-	proxyRepository  proxy.ReadWriteRepository
-	logger           proxy.Logger
-	wg               sync.WaitGroup
-	stopFeedingQueue bool
-	measurement      *service.Measurement
+	testService        *service.ProxyTester
+	measurementService *service.MeasurementService
+	logger             proxy.Logger
 }
 
-var bus *stats.EventBus
-var testService *service.ProxyTester
-
-func NewRunCommand(proxyTester *proxy.Tester, repository proxy.ReadWriteRepository, logger proxy.Logger, m *service.Measurement) *RunCommand {
-	return &RunCommand{proxyRepository: repository, logger: logger, proxyTester: proxyTester, stopFeedingQueue: false, measurement: m}
+func NewRunCommand(testService *service.ProxyTester, logger proxy.Logger, m *service.MeasurementService) *RunCommand {
+	return &RunCommand{logger: logger, measurementService: m, testService: testService}
 }
 
 func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
-	bus = stats.NewEventBus()
-	c.measurement.StartHTTP()
-
-	pOkSubscriber := make(stats.Subscriber)
-	pNokSubscriber := make(stats.Subscriber)
-	pTotalSubscriber := make(stats.Subscriber)
-
-	go func(subscriber stats.Subscriber, measurement *service.Measurement) {
-		for _ = range subscriber {
-			measurement.AddOk()
-		}
-	}(pOkSubscriber, c.measurement)
-
-	go func(subscriber stats.Subscriber, measurement *service.Measurement) {
-		for _ = range subscriber {
-			measurement.AddNok()
-		}
-	}(pNokSubscriber, c.measurement)
-
-	go func(subscriber stats.Subscriber, measurement *service.Measurement) {
-		for event := range subscriber {
-			measurement.SetTotal(event.Data.(int64))
-		}
-	}(pTotalSubscriber, c.measurement)
-
-	bus.Subscribe(stats.ProcessedOk, pOkSubscriber)
-	bus.Subscribe(stats.ProcessedNok, pNokSubscriber)
-	bus.Subscribe(stats.TotalToProcess, pTotalSubscriber)
 
 	if "" == testURL {
 		return errors.New("testURL cannot be empty string")
 	}
 
 	if 0 == maxConcurrentChecks {
-		return errors.New("macConcurrentChecks can't be zero")
+		return errors.New("maxConcurrentChecks can't be zero")
 	}
 	c.logger.Infof("Max concurrent checks %v", maxConcurrentChecks)
 
-	testService = service.NewProxyTester(c.proxyTester, c.proxyRepository, c.logger, bus)
-	c.stopFeedingOnSigTerm()
+	c.measurementService.StartHTTP()
+	c.measurementService.SubscribeOk()
+	c.measurementService.SubscribeNok()
+	c.measurementService.SubscribeTotal()
 
-	err := testService.Run(testURL, maxConcurrentChecks)
+	c.stopFeedingOnSigTerm()
+	err := c.testService.Run(testURL, maxConcurrentChecks)
 
 	if err != nil {
 		return err
@@ -88,5 +55,5 @@ func (c *RunCommand) stopFeedingOnSigTerm() {
 		<-s
 		fmt.Println("Feeding queue stopped, waiting for remaining jobs...")
 		testService.GracefulShutdown()
-	}(testService)
+	}(c.testService)
 }

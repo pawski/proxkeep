@@ -42,7 +42,7 @@ func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
 		return err
 	}
 
-	err = c.measurementService.StopHTTP()
+	err = c.measurementService.GracefulShutdownHTTP()
 
 	if err != nil {
 		return err

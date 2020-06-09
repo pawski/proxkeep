@@ -103,7 +103,7 @@ func (m *MeasurementService) StartHTTP() {
 	}()
 }
 
-func (m *MeasurementService) StopHTTP() error {
+func (m *MeasurementService) GracefulShutdownHTTP() error {
 	m.wg.Add(1)
 	err := m.statsServer.Shutdown(context.Background())
 	m.wg.Wait()

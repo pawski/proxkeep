@@ -36,8 +36,6 @@ func (bus *EventBus) Publish(event EventData) {
 
 		return
 	}
-
-	bus.logger.Infof("No subscriber for %v", event.Topic)
 }
 
 func (bus *EventBus) Subscribe(topic string, subscriber Subscriber) {

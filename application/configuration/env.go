@@ -9,7 +9,11 @@ var envConfigFile = "env.yml"
 var envConfiguration EnvConfig
 
 type EnvConfig struct {
-	MysqlDSN string `yaml:"mysql_dsn"`
+	MysqlDSN         string `yaml:"mysql_dsn"`
+	InfluxDbHost     string `yaml:"influx_host"`
+	InfluxDbUser     string `yaml:"influx_user"`
+	InfluxDbPassword string `yaml:"influx_password"`
+	InfluxDbDatabase string `yaml:"influx_database"`
 }
 
 func GetEnv() (EnvConfig, error) {

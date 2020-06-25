@@ -13,6 +13,8 @@ type AppConfig struct {
 	SelfTestUrl              string `yaml:"self_test_url"`
 	ProxyMaxConcurrentChecks uint   `yaml:"proxy_max_concurrent_checks"`
 	HttpTimeout              uint   `yaml:"http_timeout"`
+	HttpStatsEnabled         bool   `yaml:"enable_http_stats"`
+	MetricsCollectorEnabled  bool   `yaml:"enable_metrics_collector"`
 }
 
 func GetApp() (AppConfig, error) {
@@ -37,5 +39,7 @@ func GetAppDefaults() AppConfig {
 		TestUrl:                  "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf",
 		ProxyMaxConcurrentChecks: 10,
 		HttpTimeout:              10,
+		HttpStatsEnabled:         false,
+		MetricsCollectorEnabled:  false,
 	}
 }

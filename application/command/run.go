@@ -10,16 +10,17 @@ import (
 )
 
 type RunCommand struct {
-	testService        *service.ProxyTester
-	measurementService *service.MeasurementService
-	logger             proxy.Logger
+	testService             *service.ProxyTester
+	measurementService      *service.MeasurementService
+	metricsCollectorService *service.MetricsCollector
+	logger                  proxy.Logger
 }
 
-func NewRunCommand(testService *service.ProxyTester, logger proxy.Logger, m *service.MeasurementService) *RunCommand {
-	return &RunCommand{logger: logger, measurementService: m, testService: testService}
+func NewRunCommand(testService *service.ProxyTester, logger proxy.Logger, m *service.MeasurementService, mCollector *service.MetricsCollector) *RunCommand {
+	return &RunCommand{logger: logger, measurementService: m, testService: testService, metricsCollectorService: mCollector}
 }
 
-func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
+func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint, metricsCollectorEnabled bool, httpStatsEnabled bool) error {
 
 	if "" == testURL {
 		return errors.New("testURL cannot be empty string")
@@ -30,10 +31,20 @@ func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
 	}
 	c.logger.Infof("Max concurrent checks %v", maxConcurrentChecks)
 
-	c.measurementService.StartHTTP()
-	c.measurementService.SubscribeOk()
-	c.measurementService.SubscribeNok()
-	c.measurementService.SubscribeTotal()
+	if metricsCollectorEnabled {
+		c.metricsCollectorService.SubscribeNok()
+		c.metricsCollectorService.SubscribeOk()
+		c.metricsCollectorService.StartMonitor()
+	}
+
+	if httpStatsEnabled {
+		c.measurementService.SubscribeOk()
+		c.measurementService.SubscribeNok()
+		c.measurementService.SubscribeTotal()
+
+		c.logger.Info()
+		c.measurementService.StartHTTP()
+	}
 
 	c.stopFeedingOnSigTerm()
 	err := c.testService.Run(testURL, maxConcurrentChecks)
@@ -42,10 +53,12 @@ func (c *RunCommand) Execute(testURL string, maxConcurrentChecks uint) error {
 		return err
 	}
 
-	err = c.measurementService.GracefulShutdownHTTP()
+	if httpStatsEnabled {
+		err = c.measurementService.GracefulShutdownHTTP()
 
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

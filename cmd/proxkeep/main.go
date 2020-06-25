@@ -52,8 +52,9 @@ func main() {
 						repository.NewProxyServerRepository(db, getLogger()),
 						getLogger(), eb),
 					getLogger(),
-					service.NewMeasurement(eb, getLogger())).
-					Execute(appConfig.TestUrl, appConfig.ProxyMaxConcurrentChecks)
+					service.NewMeasurement(eb, getLogger()),
+					service.NewMetricsCollector(eb, getLogger())).
+					Execute(appConfig.TestUrl, appConfig.ProxyMaxConcurrentChecks, appConfig.MetricsCollectorEnabled, appConfig.HttpStatsEnabled)
 
 			},
 		}, cli.Command{

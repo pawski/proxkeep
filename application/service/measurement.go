@@ -82,13 +82,15 @@ func (m *MeasurementService) SubscribeTotal() {
 
 func (m *MeasurementService) StartHTTP() {
 	serveMux := http.NewServeMux()
-	m.statsServer = &http.Server{Addr: ":8000", Handler: serveMux}
+	m.statsServer = &http.Server{Addr: ":8000", Handler: serveMux} // make port configurable from env.yml
 
 	serveMux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		okCnt := m.values.processedOk.Count()
 		nokCnt := m.values.processedNok.Count()
 		fmt.Fprintf(writer, "Processed servers: %v, OK: %v, NOK: %v. Remaining: %v", okCnt+nokCnt, okCnt, nokCnt, m.values.totalToProcess-(okCnt+nokCnt))
 	})
+
+	m.logger.Info("Http stats server started on port %v", 8000)
 
 	m.statsServer.RegisterOnShutdown(func() {
 		m.logger.Info("Http stats server closed")
